@@ -5,6 +5,7 @@
         "transform": "./compile/transformers/lazyReflect.ts"
       }
     ],
+    "useDefineForClassFields": true,
     "baseUrl": ".",
     "target": "esnext",
     "module": "commonjs",

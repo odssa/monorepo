@@ -1,5 +1,4 @@
-
-
+import { RuntimeProxy, withApp } from "@odssa/core"
 
 export interface Person {
   id: number,
@@ -11,7 +10,10 @@ export interface FuzzyFamily {
     pets: Pet[]
   }>
 }
+
 export class PersonService {
+
+  private petSvc: PetService = RuntimeProxy.create('pets')
 
   private people: Person[] = [
     { id: 1, name: 'Dave' },
@@ -19,15 +21,26 @@ export class PersonService {
     { id: 3, name: 'Kaleb' },
   ]
 
-  constructor(private petSvc: PetService){ }
-
-  getFamilies(personId: number, ...peopleIds: number[]){
-    const ids = [personId, ...peopleIds]
-
-    const families = this.people
-      .filter( p => ids.includes(p.id) )
-      .map(person => ({ person, pets: this.petSvc.getByStaffId(person.id)  }))
+  async getFamiliesExplicitly(personId: number, ...peopleIds: number[]){
+    return await withApp( async ({ pets }) => {
+      const ids = [personId, ...peopleIds]
+      const families = Promise.all(
+        this.people
+          .filter( p => ids.includes(p.id) )
+          .map( async person => ({ person, pets: await pets.getByStaffId(person.id)  }))
+      )
     
+      return families
+    })
+  }
+
+  async getFamiliesWithProxy(personId: number, ...peopleIds: number[]){
+    const ids = [personId, ...peopleIds]
+    const families = Promise.all(
+      this.people
+        .filter( p => ids.includes(p.id) )
+        .map( async person => ({ person, pets: await this.petSvc.getByStaffId(person.id)  }))
+    )
     return families
   }
 }
@@ -46,7 +59,7 @@ export class PetService {
     { name: 'Tilly', staffId: 2, microchipped: true},
   ]
 
-  getByStaffId(aPoorSoulsId: number){
+  async getByStaffId(aPoorSoulsId: number){
     return this.pets.filter(p => p.staffId === aPoorSoulsId)
   }
 }
